@@ -1,21 +1,18 @@
 from datetime import datetime
 from typing import List
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from pydantic import BaseModel
 from peewee import *
 from playhouse.shortcuts import model_to_dict
+from fastapi import FastAPI, HTTPException
+import requests
+from google.auth import jwt
+import jwt as JWT
 import json
-from fastapi import Depends, FastAPI, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
-from fastapi.responses import JSONResponse
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import Flow
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 # Define the database connection
 database = SqliteDatabase('eventDashboard.db')
@@ -33,13 +30,13 @@ class User(Model):
 
 class Event(Model):
     id = AutoField()
-    # author_id = ForeignKeyField(User, backref='events')
+    author_name = TextField()
     author_id = IntegerField()
+    author_avatar = TextField()
     event_title = CharField()
     event_date = DateTimeField()
     event_description = TextField()
     tags = TextField()
-    contacts = TextField()
 
     class Meta:
         database = database
@@ -58,7 +55,7 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -70,173 +67,151 @@ SECRET_KEY = "your-secret-key"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 # OAuth2 password bearer
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+bearer = HTTPBearer()
 
 # Google OAuth2 Configuration
 GOOGLE_CLIENT_ID = "364066402305-bhtao8o6c7nggnfs26k7qdfd73bp55uc.apps.googleusercontent.com"
 
-# User Pydantic models
-class UserCreateRequest(BaseModel):
-    first_name: str
-    last_name: str
-    email: str
-    avatar: str
-
-class UserLoginResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-
-class UserLoginRequest(BaseModel):
-    token: str
-
-# Event Pydantic models
 class EventCreateRequest(BaseModel):
-    author_id: int
-    avatar: str
-    author: str
     event_title: str
     event_date: datetime
     event_description: str
     tags: List[str]
     contacts: str
 
-class EventUpdateRequest(BaseModel):
-    event_title: str
-    event_date: datetime
-    event_description: str
-    tags: str
-    contacts: str
-
 class EventResponse(BaseModel):
     id: int
-    author_id: int
+    author: str
+    author_avatar: str
     event_title: str
     event_date: datetime
     event_description: str
-    tags: str
+    tags: List[str]
     contacts: str
 
 class AuthRequest(BaseModel):
     code: str
+    redirectUrl: str
+
+SECRET_KEY = "your-secret-key"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth")
+
+google_auth_settings = {
+    'AppId': '364066402305-bhtao8o6c7nggnfs26k7qdfd73bp55uc.apps.googleusercontent.com',
+    'AppSecret': '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'
+}
 
 class EventListResponse(BaseModel):
     total: int
     events: List[EventResponse]
 
 @app.post("/auth")
-async def authenticate_user(authRequest: AuthRequest):
-    print(authRequest.code)
+async def authenticate_user(req: AuthRequest):
     try:
-        # Specify the CLIENT_ID of your OAuth2 client configuration
-        flow = InstalledAppFlow.from_client_info(
-            {"web": {
-                "client_id": GOOGLE_CLIENT_ID,
-                "project_id": "by-time",
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                "client_secret": "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",
-                "redirect_uris": ["http://127.0.0.1:5173/dashboard"],
-                "javascript_origins": ["http://localhost", "http://127.0.0.1"]
-            }},
-            scopes=['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile'])
-
-        flow.fetch_token(code=authRequest.code)
-
-        # Use the token to get the user info
-        session = flow.authorized_session()
-        profile_info = session.get('https://www.googleapis.com/userinfo/v2/me').json()
+        token_data = get_token(req.code, req.redirectUrl, google_auth_settings)
+        decoded_user = decode_google_token(token_data['id_token'])
+        return {"token": create_access_token(decoded_user)}
 
     except Exception as e:
         print(f"Exception during Google API call: {e}")
         raise HTTPException(status_code=400, detail="Failed to get user info from Google")
 
-    # Create or update the user in your database
+def create_access_token(user: User):
+    token = JWT.encode(user, SECRET_KEY, ALGORITHM)
+    return token
+
+async def get_current_user(creds: HTTPAuthorizationCredentials = Depends(bearer)):
     try:
-        user, created = User.get_or_create(
-            email=profile_info["email"],
-            defaults={
-                "first_name": profile_info["given_name"],
-                "last_name": profile_info["family_name"],
-                "avatar": profile_info["picture"]
-            },
-        )
+        token = creds.credentials
+        payload = JWT.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("user_id")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+        user = User.get_by_id(user_id)
+        return user
+    except JWT.DecodeError:
+        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
 
-        if not created:
-            # Update user info if the user already exists
-            user.first_name = profile_info["given_name"]
-            user.last_name= profile_info["family_name"]
-            user.avatar = profile_info["picture"]
-            user.save()
+def get_token(code, redirect_url, google_auth_settings):
+    token_request_url = 'https://oauth2.googleapis.com/token'
 
-        # Return the user info to the client
-        print(model_to_dict(user))
-        return JSONResponse(status_code=status.HTTP_200_OK,
-                            content={"user": model_to_dict(user)})
+    data = {
+        'grant_type': 'authorization_code',
+        'client_id': google_auth_settings['AppId'],
+        'client_secret': google_auth_settings['AppSecret'],
+        'code': code,
+        'access_type': 'offline',
+        'redirect_uri': redirect_url
+    }
 
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    headers = {
+        'Accept': 'application/x-www-form-urlencoded'
+    }
+
+    response = requests.post(token_request_url, data=data, headers=headers)
+    token_data = json.loads(response.text)
+
+    return token_data
+
+def decode_google_token(token):
+    decoded_token = jwt.decode(token, verify=False)
+
+    email = decoded_token.get('email')
+    first_name = decoded_token.get('given_name')
+    last_name = decoded_token.get('family_name')
+    name = decoded_token.get('name')
+    email_verified = bool(decoded_token.get('email_verified', False))
+    avatar = decoded_token.get('picture')
+
+    return \
+    {
+        "avatar": avatar,
+        "last_name": last_name,
+        "email": email,
+        "first_name": first_name,
+    }
 
 # Event controller
 @app.post('/events', response_model=EventResponse)
-def create_event(event: EventCreateRequest):
+def create_event(event: EventCreateRequest, user: User = Depends(get_current_user)):
+
     new_event = Event(
-        author_id=event.author_id,
-        avatar=event.avatar,
-        author=event.author,
+        author_id=user.id,
+        author_avatar=user.avatar,
+        author=f"{user.first_name} {user.last_name}",
         event_title=event.event_title,
         event_date=event.event_date,
         event_description=event.event_description,
-        tags=event.tags,
+        tags=' '.join(event.tags),
         contacts=event.contacts
     )
     new_event.save()
     return model_to_dict(new_event)
 
-@app.get('/events/{event_id}', response_model=EventResponse)
-def get_event(event_id: int):
-    try:
-        event = Event.get(Event.id == event_id)
-        return model_to_dict(event)
-    except Event.DoesNotExist:
-        raise HTTPException(status_code=404, detail="Event not found")
-
-@app.put('/events/{event_id}', response_model=EventResponse)
-def update_event(event_id: int, event: EventUpdateRequest):
-    try:
-        event_to_update = Event.get(Event.id == event_id)
-        event_to_update.event_title = event.event_title
-        event_to_update.event_date = event.event_date
-        event_to_update.event_description = event.event_description
-        event_to_update.tags = event.tags
-        # event_to_update.contacts = event.contacts
-        event_to_update.save()
-        return model_to_dict(event_to_update)
-    except Event.DoesNotExist:
-        raise HTTPException(status_code=404, detail="Event not found")
-
 @app.delete('/events/{event_id}')
-def delete_event(event_id: int):
+def delete_event(event_id: int, user: User = Depends(get_current_user)):
     try:
-        event_to_delete = Event.get(Event.id == event_id)
+        event_to_delete: Event = Event.get(Event.id == event_id)
+        if event_to_delete.author_id != user.id:
+            raise HTTPException(status_code=403)
+
         event_to_delete.delete_instance()
         return {"message": "Event deleted successfully"}
     except Event.DoesNotExist:
         raise HTTPException(status_code=404, detail="Event not found")
-
 
 @app.get('/events', response_model=EventListResponse)
 def get_events(
     page: int = Query(1, gt=0),
     limit: int = Query(10, gt=0, le=100),
     tags: List[str] = Query([]),
-    date: datetime = Query(None)
+    date: datetime = Query(None),
+    user: User = Depends(get_current_user)
 ):
-
     query = Event.select().paginate(page, limit)
 
     if tags:
@@ -245,7 +220,21 @@ def get_events(
     if date:
         query = query.where(Event.event_date < date)
 
-    events = [model_to_dict(event) for event in query]
-    total = query.count()
+    eventsResponse = List[EventResponse]()
 
-    return {"total": total, "events": events}
+    for event in query:
+        newResponse = EventResponse(
+            id=event.id,
+            author=event.author_name,
+            author_avata = event.author_avatar,
+            event_title=event.event_title,
+            event_date=event.event_date,
+            event_description=event.event_description,
+            tags=event.tags.split()
+        )
+
+        eventsResponse.append(newResponse)
+
+    total = len(eventsResponse)
+
+    return {"total": total, "events": json.dumps(eventsResponse)}

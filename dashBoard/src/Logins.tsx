@@ -4,7 +4,7 @@ import { boardContext } from './App';
 import { useNavigate } from 'react-router-dom';
 
 const CLIENT_ID = "364066402305-bhtao8o6c7nggnfs26k7qdfd73bp55uc.apps.googleusercontent.com";
-const REDIRECT_URI = "http://127.0.0.1:5173";
+const REDIRECT_URI = "http://localhost:5173";
 
 function Login() {
   const { user, setUser } = useContext(boardContext);
@@ -15,20 +15,17 @@ function Login() {
     const code = urlParams.get("code");
 
     if (code) {
-      fetch('http://127.0.0.1:8000/auth', {
+      fetch('http://localhost:8000/auth', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code, redirectUrl: REDIRECT_URI }),
       })
         .then(response => response.json())
         .then(data => {
         console.log(data);
-        setUser(prevUser => {
-            console.log('Updating user from', prevUser, 'to', data.user);
-            return data.user;
-          });
+        setUser(data);
           navigate('/dashboard');
         })
         .catch(error => {

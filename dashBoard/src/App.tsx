@@ -38,8 +38,10 @@ export const boardContext = createContext<iContext>({
 
 function App() {
   const [events, setEvents] = useState<iEvent[]>([]);
-  const [user, setUser] = useState<iUser | null>(null);
-console.log(user);
+  const [user, setUser] = useState<any | null>(null);
+  const [term, setTerm] = useState('')
+
+
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <boardContext.Provider value={{ events, setEvents, user, setUser }}>
@@ -50,8 +52,8 @@ console.log(user);
               path="/dashboard"
               element={
                 <>
-                  <Header />
-                  <Dashboard />
+                  <Header term={term} setTerm={setTerm}/>
+                  <Dashboard term={term}/>
                 </>} />
           </Routes>
         </Router>

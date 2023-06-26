@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { Paper, Typography, Avatar, Button, Modal, Box, Chip } from '@mui/material';
+import { Paper, Typography, Avatar, Button, Box, Chip } from '@mui/material';
 import CustomModal from './CustomModal';
 import CloseIcon from '@mui/icons-material/Close';
 import { iEvent } from './App';
-
 
 
 const CardEvent = ({ id, author, avatar, eventTitle, eventDate, eventDescription, tags, setEvents }: iEvent) => {
@@ -69,7 +68,7 @@ const CardEvent = ({ id, author, avatar, eventTitle, eventDate, eventDescription
           ))}
         </Box>
       </Paper>
-      <CustomModal title='Детали мероприятия' handleCloseModal={handleCloseModal} open={open}>
+      <CustomModal title='Event details' handleCloseModal={handleCloseModal} open={open}>
         <Typography variant="body1">
           {eventDescription}
         </Typography>

@@ -19,11 +19,19 @@ export const toCamelCase = <T extends Record<string, any>>(obj: T) => {
   return result;
 };
 
-const Dashboard = () => {
+const Dashboard = ({term}: any) => {
+
+  const {user} = useContext<any>(boardContext)
 
   const {events, setEvents} = useContext(boardContext)
   const [fetchEvents, isLoading, error] = useFetching(async (page: number) => {
-  const data = await fetch(`http://127.0.0.1:8000/events/?page=${page}&limit=10`)
+    console.log(user);
+  const data = await fetch(`http://localhost:8000/events/?page=${page}&limit=10`, {
+    method: 'GET', 
+    headers: {
+      'Authorization': `Bearer ${user?.token}`
+    }
+  })
 
   const {events} = await data.json()
 
@@ -51,7 +59,6 @@ const Dashboard = () => {
     }
   };
 
-
     const createNewEvent = (arr: iEvent[]) => {
       return arr.map(({id, author, avatar, eventTitle, eventDate, eventDescription, tags}: iEvent) => (
         <Grid key={id} item xs={12} sm={6} md={4} lg={3} >
@@ -68,10 +75,19 @@ const Dashboard = () => {
       ))
     }
 
+    console.log(term);
+
+    const filteredEvents = events.filter(event => event.tags.some(tag => tag.includes(term)));
+
     return (
       <div className='my-custom-scrollbar' style={{ padding: '0px 20px', overflow: 'auto' }} onScroll={handleScroll}>
           <Grid container spacing={2}>
-          {events.length ? createNewEvent(events) : <div className='mt-[10%] w-full text-center'>На данный момент нет активных мероприятий</div>}
+          {filteredEvents.length ? 
+          createNewEvent(filteredEvents) : 
+          <div className='mt-[10%] w-full text-center'>
+          {term ? 'No results found for the selected filters.' : 'No active events at the moment.'}
+        </div>
+          }
           </Grid>
       </div>
     );

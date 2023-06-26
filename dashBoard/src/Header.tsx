@@ -16,13 +16,12 @@ export const toSnakeCase = <T extends Record<string, any>>(obj: T) => {
     return result;
   };
 
-const Header = () => {
+const Header = ({setTerm, term}) => {
     const [openModal, setOpenModal] = useState(false);
     const [eventTitle, setEventTitle] = useState('');
     const [eventDate, setEventDate] = useState<Date>(new Date());
     const [eventDescription, setEventDescription] = useState('');
 
-    const [term, setTerm] = useState('')
 
     const [tags, setTags] = useState<string[]>([]);
     const [inputValue, setInputValue] = useState<any>('');
@@ -73,6 +72,15 @@ const Header = () => {
         reset()
     };
 
+    const setEventTitile = (e) => {
+        if (eventTitle.length >= 60) {
+            setTitleError('The title must be no more 60 characters')
+        } else {
+            setTitleError('')
+        }
+        setEventTitle(e.target.value)
+    }
+
     const reset = () => {
         setEventTitle('')
         setEventDate(new Date())
@@ -83,9 +91,6 @@ const Header = () => {
     const handleCreateEvent = async () => {
 
         const newEvent = {
-            authorId: 1,
-            avatar: 'https://lh3.googleusercontent.com/a/AGNmyxY0JJKLLjGUPb9V9SQ1EYZjvqF166yNcVV8z2sF=s96-c',
-            author: 'Nikita Savchuck',
             eventTitle,
             eventDate: eventDate.toISOString(),
             eventDescription,
@@ -123,7 +128,7 @@ const Header = () => {
             <Box>
                 <img src="https://rise.hys-enterprise.com/assets/hys-logo.svg" alt="Logo" style={{ height: '40px' }} />
             </Box>
-            <Box sx={{width: '50%'}}>
+            <Box sx={{width: '50%', padding: '10px'}}>
             <TextField fullWidth label="Search #" id="fullWidth" value={term} onChange={(e) => setTerm(e.target.value)}/>
             </Box>
             <Box>
@@ -142,8 +147,10 @@ const Header = () => {
                             variant="outlined"
                             fullWidth
                             value={eventTitle}
-                            onChange={(e) => setEventTitle(e.target.value)}
+                            onChange={setEventTitile}
                             sx={{ marginBottom: '16px' }}
+                            error={titleError.length > 0}
+                            helperText={titleError}
                         />
                         <DatePicker
                             selected={eventDate}

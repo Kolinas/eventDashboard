@@ -7,13 +7,12 @@ import Login from './Logins';
 
 export interface iEvent {
   id: number;
-  author: string;
-  avatar: string;
+  authorName: string;
+  authorAvatar: string;
   eventTitle: string;
   eventDate: Date;
   eventDescription: string;
   tags: string[];
-  setEvents: Dispatch<SetStateAction<iEvent[]>>;
 }
 
 export interface iUser {
@@ -22,29 +21,13 @@ export interface iUser {
   // Add any other user properties you need
 }
 
-export interface iContext {
-  events: iEvent[];
-  setEvents: Dispatch<SetStateAction<iEvent[]>>;
-  user: iUser | null;
-  setUser: Dispatch<SetStateAction<iUser | null>>;
-}
-
-export const boardContext = createContext<iContext>({
-  events: [],
-  setEvents: () => { },
-  user: null,
-  setUser: () => { }
-});
 
 function App() {
-  const [events, setEvents] = useState<iEvent[]>([]);
-  const [user, setUser] = useState<any | null>(null);
-  const [term, setTerm] = useState('')
 
+  const [term, setTerm] = useState('')
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <boardContext.Provider value={{ events, setEvents, user, setUser }}>
         <Router>
           <Routes>
             <Route path="/" element={<Login />} />
@@ -57,7 +40,6 @@ function App() {
                 </>} />
           </Routes>
         </Router>
-      </boardContext.Provider>
     </div>
   )
 }

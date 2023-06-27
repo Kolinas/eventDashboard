@@ -7,7 +7,6 @@ const CLIENT_ID = "364066402305-bhtao8o6c7nggnfs26k7qdfd73bp55uc.apps.googleuser
 const REDIRECT_URI = "http://localhost:5173";
 
 function Login() {
-  const { user, setUser } = useContext(boardContext);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,8 +23,7 @@ function Login() {
       })
         .then(response => response.json())
         .then(data => {
-        console.log(data);
-        setUser(data);
+            localStorage.setItem('token', data.token)
           navigate('/dashboard');
         })
         .catch(error => {

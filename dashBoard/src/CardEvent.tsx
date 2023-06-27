@@ -5,7 +5,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { iEvent } from './App';
 
 
-const CardEvent = ({ id, author, avatar, eventTitle, eventDate, eventDescription, tags, setEvents }: iEvent) => {
+const CardEvent = ({ id, authorName, authorAvatar, eventTitle, eventDate, eventDescription, tags }: iEvent) => {
 
   const [open, setOpen] = useState(false);
 
@@ -40,11 +40,11 @@ const CardEvent = ({ id, author, avatar, eventTitle, eventDate, eventDescription
     <Box sx={{ marginBottom: '16px' }}>
       <Paper elevation={5} sx={{ padding: '16px', borderRadius: '10px', backgroundColor: '#f5f5f5', position: 'relative' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-          <Avatar src={avatar} />
+          <Avatar src={authorAvatar} />
           <Typography variant="body1" sx={{ marginLeft: '8px' }}>
-            {author}
+            {authorName}
           </Typography>
-          <Box sx={{marginLeft: 'auto', cursor: 'pointer', alignSelf: 'start'}} onClick={() => setEvents(events => events.filter(event => event.id !== id))}>
+          <Box sx={{marginLeft: 'auto', cursor: 'pointer', alignSelf: 'start'}} >
           <CloseIcon/>
           </Box>
         </Box>
@@ -64,7 +64,7 @@ const CardEvent = ({ id, author, avatar, eventTitle, eventDate, eventDescription
         </Box>
         <Box sx={{ display: 'flex', justifyContent: 'flex-start', marginTop: '10px', flexWrap: 'wrap', gap: '5px', minHeight: '53px' }}>
           {tags.map(tag => (
-            <Chip label={tag} size="small" sx={{ marginRight: '4px' }} />
+            <Chip key={tag} label={tag} size="small" sx={{ marginRight: '4px' }} />
           ))}
         </Box>
       </Paper>

@@ -1,35 +1,33 @@
-import { ChangeEvent, useContext, useState } from 'react';
-import { Box, Typography, Button, Menu, MenuItem, Modal, TextField, TextareaAutosize, Chip, OutlinedInput, InputAdornment } from '@mui/material';
+import { ChangeEvent, useState } from 'react';
+import { Box, Typography, Button, Modal, TextField, TextareaAutosize, Chip, } from '@mui/material';
 import DatePicker from 'react-datepicker';
+import { useCreateEventMutation } from './apiSlice';
 import 'react-datepicker/dist/react-datepicker.css';
-
-import { boardContext } from './App';
 
 export const toSnakeCase = <T extends Record<string, any>>(obj: T) => {
     const result: Record<string, any> = {};
-  
-    for (const key in obj) {
-      const snakeCaseKey = key.replace(/[A-Z]/g, (match) => `_${match.toLowerCase()}`);
-      result[snakeCaseKey] = obj[key];
-    }
-  
-    return result;
-  };
 
-const Header = ({setTerm, term}) => {
+    for (const key in obj) {
+        const snakeCaseKey = key.replace(/[A-Z]/g, (match) => `_${match.toLowerCase()}`);
+        result[snakeCaseKey] = obj[key];
+    }
+
+    return result;
+};
+
+
+const Header = ({ setTerm, term }) => {
     const [openModal, setOpenModal] = useState(false);
     const [eventTitle, setEventTitle] = useState('');
     const [eventDate, setEventDate] = useState<Date>(new Date());
     const [eventDescription, setEventDescription] = useState('');
-
-
     const [tags, setTags] = useState<string[]>([]);
     const [inputValue, setInputValue] = useState<any>('');
-
     const [tagError, setTagError] = useState('');
     const [titleError, setTitleError] = useState('');
 
-    const { setEvents } = useContext(boardContext)
+    const [createEvent, { isLoading, error }] = useCreateEventMutation();
+
 
     const handleInputChange = (e: any) => {
         setInputValue(e.target.value);
@@ -37,7 +35,7 @@ const Header = ({setTerm, term}) => {
 
     const createTag = () => {
         if (!inputValue) return
-        if(inputValue.length > 10) {
+        if (inputValue.length > 10) {
             setTagError("Tag length must not be more than 10 characters");
             setInputValue('');
             return
@@ -88,48 +86,34 @@ const Header = ({setTerm, term}) => {
         setTags([])
     }
 
-    const handleCreateEvent = async () => {
+    const handleCreateEvent = async (e) => {
+        e.preventDefault();
+        try {
+            const newEvent = {
+                eventTitle,
+                eventDate: eventDate.toISOString(),
+                eventDescription,
+                tags,
+            }
+            const eventPayload = { ...newEvent, tags: tags.toString() }
+            await createEvent(toSnakeCase(eventPayload)).unwrap();
 
-        const newEvent = {
-            eventTitle,
-            eventDate: eventDate.toISOString(),
-            eventDescription,
-            tags,
+            // Очистите форму или выполните другие действия после успешного создания события
+            handleCloseModal()
+            reset()
+        } catch (error) {
+            // Обработайте ошибки здесь
+            console.error('Failed to create event:', error);
         }
-
-        const sendEvent = {...newEvent, tags}
-
-        console.log(JSON.stringify(toSnakeCase(newEvent)));
-
-        const response = await fetch('http://127.0.0.1:8000/events', {
-            method: 'POST',
-            // mode: "no-cors",
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(toSnakeCase(sendEvent))
-        });
-    
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-    
-        const data = await response.json();
-
-        console.log(data);
-        
-        setEvents((events) => [...events, { ...newEvent, id: events.length + 1 }])
-        handleCloseModal()
-        reset()
     };
 
     return (
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px'}}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px' }}>
             <Box>
                 <img src="https://rise.hys-enterprise.com/assets/hys-logo.svg" alt="Logo" style={{ height: '40px' }} />
             </Box>
-            <Box sx={{width: '50%', padding: '10px'}}>
-            <TextField fullWidth label="Search #" id="fullWidth" value={term} onChange={(e) => setTerm(e.target.value)}/>
+            <Box sx={{ width: '50%', padding: '10px' }}>
+                <TextField fullWidth label="Search #" id="fullWidth" value={term} onChange={(e) => setTerm(e.target.value)} />
             </Box>
             <Box>
                 <Button variant="outlined" color="primary" onClick={handleOpenModal}>
@@ -182,7 +166,7 @@ const Header = ({setTerm, term}) => {
                                 error={tagError.length > 0}
                                 helperText={tagError}
                             />
-                            <Box sx={{ display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
+                            <Box sx={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                                 {tags.map((tag, index) => (
                                     <Chip key={index} label={tag} onDelete={() => handleDeleteTag(tag)} />
                                 ))}

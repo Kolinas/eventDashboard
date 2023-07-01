@@ -1,9 +1,9 @@
 import { Dispatch, SetStateAction, createContext, useCallback, useState } from 'react'
 import './App.css'
-import Dashboard from './Dashboard'
-import Header from './Header'
+import Dashboard from './components/Dashboard'
+import Header from './components/Header'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Login from './Logins';
+import Login from './components/Logins';
 
 export interface iEvent {
   id: number;

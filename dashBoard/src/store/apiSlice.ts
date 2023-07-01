@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import { toCamelCase, cleanTags } from './helpers'
+import { toCamelCase, cleanTags } from '../helpers'
 
 const baseQuery = fetchBaseQuery({
   baseUrl: 'http://localhost:8000',
@@ -15,11 +15,11 @@ const baseQuery = fetchBaseQuery({
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: baseQuery,
+  tagTypes: ['Events'],
   endpoints: (builder) => ({
     getEvents: builder.query({
       query: ({ page, limit = 10 }) => `events/?page=${page}&limit=${limit}`,
       transformResponse: (response: any) => {
-        // Преобразование ответа сервера перед обработкой
         const { events } = response
         const transformedEvents = events.map(el => {
           const tag = cleanTags(el.tags).split(',')
@@ -27,7 +27,7 @@ export const apiSlice = createApi({
         })
         return transformedEvents;
       },
-      providesTags: ['Events'] as any
+      providesTags: ['Events']
     }),
     createEvent: builder.mutation({
       query: (event) => ({
@@ -35,7 +35,7 @@ export const apiSlice = createApi({
         method: 'POST',
         body: event,
       }),
-      invalidatesTags: ['Events'] as any
+      invalidatesTags: ['Events']
     }),
   }),
 });

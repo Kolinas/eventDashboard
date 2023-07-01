@@ -1,9 +1,9 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import { Grid, Container, Box} from '@mui/material';
 import CardEvent  from './CardEvent';
-import { iEvent } from './App';
+import { iEvent } from '../App';
 
-import { useGetEventsQuery } from './apiSlice';
+import { useGetEventsQuery } from '../store/apiSlice';
 
 
 
@@ -13,10 +13,6 @@ const Dashboard = ({term}: any) => {
   const page = useRef(1)
   const { data: events, isLoading, refetch } = useGetEventsQuery({page: page.current});
 
-
-  // useEffect(() => {
-  //   fetchEvents(pageRef.current)
-  // }, [])
 
   const handleScroll = (e) => {
     const bottom = e.target.scrollHeight - e.target.scrollTop === e.target.clientHeight;
@@ -42,10 +38,6 @@ const Dashboard = ({term}: any) => {
       </Grid>
       })
     }
-
-    // console.log(term);
-
-    // const filteredEvents = events.filter(event => event.tags.some(tag => tag.includes(term)));
 
 
     return (

@@ -1,6 +1,6 @@
 // Login.js
 import { useEffect, useContext } from 'react';
-import { boardContext } from './App';
+import { boardContext } from '../App';
 import { useNavigate } from 'react-router-dom';
 
 const CLIENT_ID = "364066402305-bhtao8o6c7nggnfs26k7qdfd73bp55uc.apps.googleusercontent.com";

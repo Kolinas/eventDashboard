@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Paper, Typography, Avatar, Button, Box, Chip } from '@mui/material';
 import CustomModal from './CustomModal';
 import CloseIcon from '@mui/icons-material/Close';
-import { iEvent } from './App';
+import { iEvent } from '../App';
 
 
 const CardEvent = ({ id, authorName, authorAvatar, eventTitle, eventDate, eventDescription, tags }: iEvent) => {
